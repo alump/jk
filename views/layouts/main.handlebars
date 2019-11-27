@@ -1,0 +1,47 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <meta charset="utf-8">
+        <title>{{#if title}}{{title}}{{else}}JK{{/if}}</title>
+        <link href="https://fonts.googleapis.com/css?family=Muli&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="{{rootUrl}}css/animation.css">
+        <link rel="stylesheet" href="{{rootUrl}}css/styles.css">
+        <!-- <script src="{{rootUrl}}js/snowstorm-min.js"></script> -->
+        <script src="{{rootUrl}}js/moment-with-locales.min.js"></script>
+        <script src="{{rootUrl}}js/moment-timezone-with-data-1970-2030.min.js"></script>
+        <script>
+            moment.tz.setDefault("{{timeZone}}");
+        </script>
+        <script src="{{rootUrl}}js/jk.js"></script>
+        <link rel="icon" href="{{rootUrl}}images/favicon.ico" type="image/x-icon"/>
+    </head>
+    <body>
+        <header>
+        <h1><b>J</b>oulukalenteri<b>K</b>isa</h1>
+        <div id="actions">
+        {{#if notHome}}
+            <a href="{{rootUrl}}">🏠</a>
+        {{/if}}
+        {{#if user}}
+            {{#if user.admin}}
+            <a href="{{rootUrl}}admin">Hallinta</a>
+            {{/if}}
+        <a href="{{rootUrl}}logout">Kirjaudu ulos</a>
+        {{else}}
+        <a href="{{rootUrl}}login">Kirjaudu sisään</a>
+        {{/if}}
+        </div>
+        {{#if user}}{{#if user.picture}}
+        <img src="{{user.picture}}" class="profile">
+        {{/if}}{{/if}}
+        </header>
+
+        {{{body}}}
+
+        <footer>
+            Sami Viitanen 2019
+        </footer>
+
+    </body>
+</html>

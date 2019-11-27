@@ -1,0 +1,84 @@
+<h2>{{group.name}} {{year}}</h2>
+
+<details open>
+    <summary>Kalenteri</summary>
+    <div class="calendar">
+        {{#each calendar}}
+        <div class="hole-wrapper">
+            <div class="{{holeClassname}}">
+                {{#if holeBgImage}}
+                <div class="winner" style="background-image: url('{{holeBgImage}}')"></div>
+                {{/if}}
+                {{#if points}}
+                <div class="points">{{points}}</div>
+                {{/if}}
+                <div class="shader"></div>
+            </div>
+            <div class="{{hatchClassname}}" style="{{hatchStyles}}"
+                {{#if today}}onclick="yell('{{../rootUrl}}yell', '{{../group._id}}')"{{/if}}
+            >
+                <span class="day">{{day}}</span>
+            </div>
+        </div>
+        {{/each}}
+    </div>
+</details>
+
+{{#if yesterday}}
+<section>
+    <h2>Eilisen ({{yesterday.date}}) huutokisan tiedot:</h2>
+    <p>
+        <b>Tavoiteaika:</b> {{yesterday.target}}
+    </p>
+    <p>
+        <b>Voittajahuuto:</b>
+        {{#if yesterday.yeller}}
+        {{yesterday.yeller}}, {{yesterday.time}}, {{yesterday.points}}
+        {{else}}
+        Kukaan ei huutanut
+        {{/if}}
+    </p>
+    {{#if yesterday.allYells}}
+    <details>
+        <summary>Kaikki huudot</summary>
+        <table>
+            <tr><th>Huutaja</th><th>Aika</th></tr>
+            {{#each yesterday.allYells}}
+            <tr><td>{{username}}</td><td>{{time}}</td></tr>
+            {{/each}}
+        </table>
+    </details>
+    {{/if}}
+</section>
+{{/if}}
+
+<details>
+    <summary>Pistetaulukko</summary>
+
+    <table class="standings">
+        <tr><th></th><th>Huutaja</th><th>Pisteet</th></tr>
+        {{#each scores}}
+        <tr>
+            <td>{{#if image}}<img src="{{image}}" class="profile-image">{{/if}}</td>
+            <td>{{name}}</td>
+            <td>{{points}}</td>
+        </tr>
+        {{/each}}
+    </table>
+</details>
+
+<details>
+    <summary>Huutologi</summary>
+    <div>
+        <button onclick="loadYesterdaysYells('yell-log', '{{rootUrl}}yells/{{group.name}}/{{year}}')">Eilisen huudot</button>
+        <button onclick="loadYells('yell-log', '{{rootUrl}}yells/{{group.name}}/{{year}}')">Kaikki huudot</button>
+    </div>
+    <div id="yell-log">
+    </div>
+</details>
+
+<details>
+    <summary>Säännöt</summary>
+    TODO
+</details>
+

@@ -1,0 +1,15 @@
+{{#if user}}
+Hei {{user.displayName}}!
+{{/if}}
+
+{{#if groups}}
+<details>
+    <summary>Ryhmät</summary>
+
+    <ul>
+    {{#each groups}}
+        <li><a href="groups/{{name}}">{{name}}</a></li>
+    {{/each}}
+    </ul>
+</details>
+{{/if}}

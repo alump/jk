@@ -1,0 +1,362 @@
+* {
+    margin: 0px;
+    padding: 0px;
+    box-sizing: border-box;
+
+    --font-family: 'Muli', sans-serif;
+    --medium-spacing: 1rem;
+    --small-spacing: 0.5rem;
+    --main-bg-color: #600;
+    --header-bg-color: rgba(0,0,0,0.2);
+    --border-radius-field: 5px;
+ }
+
+body {
+  font-family: var(--font-family);
+  background-color: var(--main-bg-color);
+  color: white;
+  text-shadow: 1px 1px 1px rgba(0,0,0,0.25);
+  min-height: 100vh;
+}
+
+a {
+    color: white;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+input[type=text], input[type=password] {
+    font-family: var(--font-family);
+    border-radius: var(--border-radius-field);
+    border: 1px solid var(--header-bg-color);
+    font-size: 14px;
+    padding: 0.25em 0.25em;
+}
+
+details summary {
+    outline: none;
+}
+
+section, details {
+    margin: var(--small-spacing) var(--medium-spacing);
+    padding: 0.5rem 1rem;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+section h3, details summary {
+    margin: -0.5rem -1rem 0 -1rem;
+    padding: 0.5em 2em;
+    background: rgba(0,0,0,0.2);
+    margin-bottom: 0.5em;
+}
+
+details ul {
+    padding: 0em 1em;
+}
+
+button {
+    padding: 0.5em 1.0em;
+    margin: 0.5em 0;
+    border-radius: var(--border-radius-field);
+}
+
+form label {
+    display: inline-block;
+    width: 150px;
+    text-align: right;
+    padding-right: var(--small-spacing);
+}
+
+table.standings {
+  margin-left: auto;
+  margin-right: auto;
+  border-width: 1px;
+  border-style: solid;
+  border-color: white;
+  border-radius: 4px;
+  background-color: #DDD;
+  color: black;
+  text-shadow: 1px 1px 1px rgba(255,255,255,0.25);
+  box-shadow: 0px 0px 5px 2px #400;
+  border-spacing: 0px;
+}
+
+table.standings th {
+  width: 80px;
+  background-color: #800;
+  color: white;
+}
+
+table.standings tr th:first-child {
+  width: 100px;
+}
+
+table.standings th:first-child {
+  border-radius: 4px 0px 0px 4px;
+}
+
+table.standings th:last-child {
+  border-radius: 0px 4px 4px 0px;
+}
+
+table.standings .even {
+  background-color: rgba(255,255,255,0.25);
+}
+
+table.standings .winner td:first-child {
+  font-weight: bold;
+}
+
+table.standings tr.dnfuno td {
+  border-width: 1px 0px 0px 0px;
+  border-color: rgba(0,0,0,0.5);
+  border-style: solid;
+}
+
+table.standings .dnf {
+  color: rgba(0,0,0,0.5);
+}
+
+table.standings .change {
+  color: rgba(0,0,0,0.5);
+  font-style: cursive;
+}
+
+ul.rules {
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: left;
+}
+
+ul.rules li {
+  list-style: upper-roman;
+}
+
+header {
+    background: var(--header-bg-color);
+    margin-bottom: 0.5em;
+    position: relative;
+}
+
+header h1 {
+    padding: 0.5em 1.5em;
+    color: rgba(255,255,255,0.66);
+}
+
+header h1 b {
+    color: white;
+}
+
+header .profile {
+    height: 50px;
+    width: 50px;
+    border-radius: 25px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+header #actions {
+    background: var(--header-bg-color);
+    padding: 0.5em 1em;
+    text-align: right;
+}
+
+header #actions a {
+    border-left: 1px solid rgba(255,255,255,0.2);
+    padding: 0.3em 1em;
+}
+
+header #actions a:hover {
+    background: var(--header-bg-color);
+    text-decoration: none;
+}
+
+header #actions a:first-child {
+    border-left: 0px;
+}
+
+footer {
+    width: 100%;
+    height: 2.0em;
+    padding: 0.25em 1em;
+    background: var(--header-bg-color);
+}
+
+.calendar {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+}
+
+.calendar .hole-wrapper {
+    width: 100px;
+    height: 100px;
+    max-width: 33%;
+    padding: 5px;
+    position: relative;
+}
+
+.calendar .hole {
+    width: 100%;
+    height: 100%;
+    border: 2px dotted rgba(0,0,0,0.1);
+    border-top-color: rgba(0,0,0,0.05);
+    border-left-color: rgba(0,0,0,0.05);
+    
+    position: relative;
+    border-radius: 3px;
+}
+
+.calendar .hole.open  {
+    border: 3px solid rgba(0,0,0,0.1);
+    border-bottom-color: rgba(255,255,255,0.05);
+    border-right-color: rgba(255,255,255,0.05);
+    background-color: rgba(255,255,255,0.03);
+}
+
+.calendar .hatch {
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 0px;
+    right: 3px;
+    background-color: #700000;
+}
+
+.calendar .hatch.yelled:after {
+    content: "\2713";
+    background-color: #070;
+    color: white;
+    text-shadow: 0px 0px 2px black;
+    width: 20px;
+    line-height: 20px;
+    display: inline-block;
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    text-align: center;
+    border-radius: 10px;
+}
+
+.calendar .hatch.open {
+    background: linear-gradient(to right, #500 0%, #800 95%, red 100%);
+    transform-origin: 0% 50%;
+    /* transform: rotate(0.5deg) scaleX(0.2); */
+    box-shadow: 4px 0px 4px rgba(0,0,0,0.2);
+}
+
+.calendar .hatch .day {
+    position: absolute;
+    width: 20px;
+    line-height: 20px;
+    left: 50%;
+    top: 50%;
+    margin-top: -10px;
+    margin-left: -10px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.calendar .hatch.open .day {
+    opacity: 0.5;
+}
+
+.calendar .hatch.today {
+    cursor: pointer;
+}
+
+.calendar .hatch.today:hover {
+    animation-name: today-hatch;
+    animation-duration: 2s;	
+    animation-timing-function: ease-in-out;	
+    transform-origin: 0% 50%;
+    visibility: visible !important;		
+}
+
+.calendar .hole .winner {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    background-size: contain;
+}
+
+.calendar .hole .points {
+    position: absolute;
+    right: 5px;
+    bottom: 2px;
+    font-size: 10px;
+    background: yellow;
+    color: rgba(0,0,0,0.67);
+    border: 1px solid rgba(0,0,0,0.67);
+    border-top-color: rgba(255,255,255,0.67);
+    border-left-color: rgba(255,255,255,0.67);
+    line-height: 24px;
+    width: 24px;
+    text-align: center;
+    border-radius: 12px;
+}
+
+.calendar .hole .shader {
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    background-color: rgba(0,0,0,0.33);    
+}
+
+#yell-log {
+    width: 100%;
+    height: 200px;
+    overflow-y: scroll;
+    background-color: rgba(0,0,0,0.3);
+    color: white;
+    border-radius: var(--border-radius-field);
+    text-shadow: none;
+    font-family: monospace;
+    display: none;
+}
+
+#yell-log .info {
+    margin: 0.5em 1em;
+    font-weight: bold;
+}
+
+table.log {
+    border: 1px solid rgba(255,255,255,0.3);
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+table.log th, table.log td {
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 0.33em 0.5em;
+}
+
+h2 {
+    text-align: center;
+}
+
+button {
+    background: linear-gradient(to top, #060 0%,  #060 49%,  #070 51%, #070 100%);
+    border: 2px solid rgba(255,255,255,0.1);
+    border-bottom-color: rgba(0,0,0,0.1);
+    border-right-color: rgba(0,0,0,0.1);
+    color: white;
+    font-size: 14px;
+    user-select: none;
+    border-radius: var(--border-radius-field);
+    box-shadow: inset 3px 3px 6px rgba(255,255,255,0.1);
+    text-shadow: none;
+    outline: none;
+    cursor: pointer;
+}

@@ -1,0 +1,39 @@
+<details>
+    <summary>Lisää ryhmä</summary>
+    <form action="{{rootUrl}}addGroup" method="post">
+        <div>
+            <label for="name">Name:</label>
+            <input type="text" placeholder="Ryhmän nimi" name="name" required>
+        </div>
+        <div>
+            <label for="add-group-button"></label>
+            <button type="submit" name="add-group-button">Lisää ryhmä</button>
+        </div>
+    </form>
+</details>
+
+<details>
+    <summary>Lisää käyttäjä ryhmään</summary>
+    <form action="{{rootUrl}}addUserToGroup" method="post">
+        <div>
+            <label for="group">Ryhmä:</label>
+            <select name="group">
+                {{#each groups}}
+                    <option value="{{_id}}">{{name}}</option>
+                {{/each}}
+            </select>
+        </div>
+        <div>
+            <label for="user">Käyttäjä:</label>
+            <select name="user">
+                {{#each users}}
+                    <option value="{{_id}}">{{name}}</option>
+                {{/each}}
+            </select>
+        </div>
+        <div>
+            <label for="add-user-to-group-button"></label>
+            <button type="submit" name="add-user-to-group-button">Lisää käyttäjä ryhmään</button>
+        </div>
+    </form>
+</details>
