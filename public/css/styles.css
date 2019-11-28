@@ -347,7 +347,7 @@ h2 {
 }
 
 button {
-    background: linear-gradient(to top, #060 0%,  #060 49%,  #070 51%, #070 100%);
+    background: linear-gradient(to top, #006800 0%,   #006800 49%,  #070 51%, #070 100%);
     border: 2px solid rgba(255,255,255,0.1);
     border-bottom-color: rgba(0,0,0,0.1);
     border-right-color: rgba(0,0,0,0.1);
@@ -355,8 +355,22 @@ button {
     font-size: 14px;
     user-select: none;
     border-radius: var(--border-radius-field);
-    box-shadow: inset 3px 3px 6px rgba(255,255,255,0.1);
+    box-shadow: inset 3px 3px 6px rgba(255,255,255,0.15), inset -3px -3px 6px rgba(255,255,255,0.15);
     text-shadow: none;
     outline: none;
     cursor: pointer;
+    text-transform: uppercase;
+}
+
+.calendar-section .info {
+    margin: 0em 0em 1em 0em;
+}
+
+ul.rules {
+    list-style-type: upper-roman;
+    color: #FCC;
+}
+
+ul.rules b {
+    color: white;
 }

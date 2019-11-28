@@ -1,7 +1,14 @@
 <h2>{{group.name}} {{year}}</h2>
 
-<details open>
+<details class="calendar-section" open>
     <summary>Kalenteri</summary>
+    <div class="info">
+        {{#if user}}
+            Klikkaa päivän luukkua osallistuaksesi kisaan!
+        {{else}}
+            <a href="{{rootUrl}}login">Kirjaudu sisään</a> osallistuaksesi kilpailuun!
+        {{/if}}
+    </div>
     <div class="calendar">
         {{#each calendar}}
         <div class="hole-wrapper">
@@ -79,6 +86,6 @@
 
 <details>
     <summary>Säännöt</summary>
-    TODO
+    {{{rules}}}
 </details>
 

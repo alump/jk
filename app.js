@@ -1,4 +1,5 @@
 // Dependencies
+const dotenv = require('dotenv').config();
 const express = require("express");
 const exphbd = require("express-handlebars");
 const moment = require('moment-timezone');
@@ -6,20 +7,20 @@ const crypto = require("crypto");
 const { check, validationResult } = require('express-validator');
 const uuidv1 = require('uuid/v1');
 const session = require('express-session');
-const dotenv = require('dotenv');
 const passport = require('passport');
 const Auth0Strategy = require('passport-auth0');
 const request = require("request");
 const url = require('url');
 const util = require('util');
 const shuffle = require('shuffle-array');
-var schedule = require('node-schedule');
+const fs = require('fs');
+const nedb = require('nedb');
 
 // Project files
-const databases = new require("./databases");
+const databases = require("./dist/databases.js").Databases;
+const scheduler = require("./dist/scheduler.js").Scheduler;
 const packageJson = require("./package.json");
 
-dotenv.config();
 const db = new databases(process.env.DATABASE_PATH);
 
 var app = express();
@@ -80,7 +81,7 @@ passport.serializeUser(function (user, done) {
             "picture": user.picture
         };
 
-        findOrCreateUser(sessionUser, (dbUser) => {
+        db.findOrCreateUser(sessionUser.authId, sessionUser.displayName, sessionUser.email, sessionUser.picture, (dbUser) => {
             sessionUser.id = dbUser._id;
             sessionUser.groups = dbUser.groups;
             done(null, sessionUser);
@@ -98,255 +99,6 @@ passport.deserializeUser(function (user, done) {
 
 function getNow() {
     return moment().tz(process.env.TIMEZONE);
-}
-
-function addScore(year, group, user, points, callback) {
-    const query = { $and: [{"year": year}, {"user": user}, {"group": group}]};
-
-    db.scores.findOne(query).exec((err,doc) => {
-        if(err !== null) {
-            console.error("Failed to load score!");
-        }
-
-        if(doc === null) {
-            doc = {
-                "user": user,
-                "year": year,
-                "group": group,
-                "points": points
-            };
-            db.insert(doc, (err, newDoc) => {
-                if(err) {
-                    console.error("Failed to insert score: " + err);
-                    callback();
-                } else {
-                    callback(newDoc);
-                }
-            });
-        } else {
-            doc.points += points;
-            db.scores.update({"_id": doc,_id }, doc, {}, (err, updatedCount) => {
-                if(err) {
-                    console.error("Failed to update scores: " + err);
-                    callback();
-                } else {
-                    callback(doc);
-                }
-            });
-        }
-    });
-}
-
-function getScores(year, group, callback) {
-    const query = { $and: [{"year": year}, {"group": group._id}]};
-    db.scores.find(query, (err,docs) => {
-        if(err) {
-            console.error("Failed to resolve scores:" + err);
-            callback([]);
-        } else {
-            docs.sort((a, b) => { return b.points - a.points }); 
-
-            callback({
-                "year": year,
-                "group": group,
-                "scores": docs
-            });
-        }
-    });
-}
-
-function addYell(user, groupId, callback) {
-    const now = getNow();
-    const year = now.year();
-    const date = now.format("YYYY-MM-DD");
-    const time = now.format();
-    const userId = user.id;
-    const query = { $and: [ { "user.id": userId }, { "group": groupId }, { "year": Number(year) }, { "date": date } ]};
-
-    db.yells.findOne(query, (err,doc) => {
-        if(err) {
-            console.error("Failed to add/update yell: " + err);
-            return;
-        } else if(doc) {
-            doc.time = time;
-            doc.ignoredYells.push(doc.time);
-            db.yells.update({ "_id": doc._id }, { $set: { "time" : doc.time, "ignoredYells" : doc.ignoredYells } }, (err, numReplaced) => {
-                if(err) {
-                    console.error("Failed to update yell: " + err);
-                    callback();
-                } else {
-                    callback(doc);
-                }
-            });
-        } else {
-            doc = {
-                "user": {
-                    "id": userId,
-                    "name": user.displayName,
-                    "picture": user.picture
-                },
-                "group": groupId,
-                "year": Number(year),
-                "date": date,
-                "time": time,
-                "ignoredYells": []
-            };
-            db.yells.insert(doc, (err, newDoc) => {
-                if(err) {
-                    console.error("Failed to add yell: " + err);
-                    callback();
-                } else {
-                    callback(newDoc);
-                }
-            });
-        }
-    });
-
-}
-
-function findUserWithId(id, callback) {
-    return db.users.findOne({"_id": id}, (err, doc) => {
-        if(err) {
-            console.error("Failed to load user");
-        } else {
-            callback(doc);
-        }
-    });
-}
-
-function findOrCreateUser(sessionUser, callback) {
-    findUserWithAuthId(sessionUser.authId, (user) => {
-        const now = getNow().format();
-        if(user) {
-            user.lastLogin = now;
-            db.users.update({ "_id": user._id }, { $set: { "lastLogin" : user.lastLogin } }, (err, numReplaced) => {
-                if(err) {
-                    console.error("Failed to update user");
-                    callback();
-                } else {
-                    callback(user);
-                }
-            });
-        } else {
-            user = {
-                "authIds": [ sessionUser.authId ],
-                "name": sessionUser.displayName,
-                "email": sessionUser.email,
-                "picture": sessionUser.picture,
-                "groups": [],
-                "createdAt": now,
-                "lastLogin": now,
-                "public": true
-            }
-            db.users.insert(user, (err, newDoc) => {
-                if(err) {
-                    console.error("Failed to insert new user");
-                    callback();
-                } else {
-                    callback(newDoc);
-                }
-            });
-        }
-    });
-}
-
-function findUserWithAuthId(authId, callback) {
-    const query = { "authIds": authId };
-    db.users.find(query).exec((err,docs) => {
-        if(err) {
-            console.error("Failed to query user");
-            callback();
-        } else if(docs === undefined || docs.length === 0) {
-            callback();
-        } else if(docs.length !== 1) {
-            console.error("Found wrong amount of users " + docs.length);
-            callback();
-        } else {
-            callback(docs.pop());
-        }
-    });
-}
-
-function addGroup(userId, name, callback) {
-    db.groups.find({"name": name}, (err, docs) => {
-        if(err) {
-            console.error("Failed to check if group exists");
-            callback();
-        } else if(docs.length != 0) {
-            console.error("Group already exists");
-            callback();
-        } else {
-            let doc = {
-                "name": name,
-                "public": true,
-                "createdAt": getNow().format,
-                "createdBy": userId 
-            }
-            db.groups.insert(doc, (err, newDoc) => {
-                if(err) {
-                    console.error("Failed to add group");
-                    callback();
-                } else {
-                    callback(newDoc);
-                }
-            });
-        }
-    });
-}
-
-function getGroupWithName(name, callback) {
-    db.groups.find({ "name": name }, (err, docs) => {
-        if(err) {
-            console.error("Failed to load group with name");
-            callback();
-        } else if(docs.length != 1) {
-            console.error("Failed to find group with name: '" + name + "'");
-            callback();
-        } else {
-            callback(docs.pop());
-        }
-    });
-}
-
-function getGroupWithId(id, callback) {
-    db.groups.findOne({ "_id": id }, (err, doc) => {
-        if(err) {
-            console.error("Failed to load group with id");
-            callback();
-        } else {
-            callback(doc);
-        }
-    });
-}
-
-function getAllGroups(callback) {
-    db.groups.find({ "public": true }, (err, docs) => {
-        if(err) {
-            console.error("Failed to load groups");
-            callback();
-        } else {
-            callback(docs);
-        }
-    });
-}
-
-function getAllUsers(callback) {
-    db.users.find({ "public": true }, (err, docs) => {
-        if(err) {
-            console.error("Failes to load users");
-            callback();
-        } else {
-            callback(docs);
-        }
-    });
-}
-
-function getAllUsersAndGroups(callback) {
-    getAllGroups((groups) => {
-        getAllUsers((users) => {
-            callback(users, groups);
-        });
-    });
 }
 
 function parseUserForTemplates(req) {
@@ -417,14 +169,19 @@ function loadDays(group, year) {
 
 function processGroupYear(user, res, group, year) {
 
-    getScores(2019, group, (scores) => {
-        let renderDataObj = getRenderObject(user);
-        renderDataObj.year = year;
-        renderDataObj.group = group;
-        renderDataObj.scores = scores;
-        renderDataObj.calendar = loadDays(group, year);
-        renderDataObj.title = "JK " + group.name + " " + year; 
-        res.render("group", renderDataObj);
+    db.findScores(2019, group._id, (scores) => {
+        db.findTargetsForGroup(group._id, year, (targets) => {
+            loadRules((rules) => {
+                let renderDataObj = getRenderObject(user);
+                renderDataObj.year = year;
+                renderDataObj.group = group;
+                renderDataObj.scores = scores;
+                renderDataObj.calendar = loadDays(group, year);
+                renderDataObj.title = "JK " + group.name + " " + year;
+                renderDataObj.rules = rules;
+                res.render("group", renderDataObj);
+            });
+        });
     });
 }
 
@@ -466,18 +223,6 @@ function getUserRoles(userId, callback) {
     });
 }
 
-function getYells(query, callback) {
-    db.yells.find(query, (err, docs) => {
-        if(err) {
-            console.error("Failed to query yells");
-            callback();
-        } else {
-            docs.sort((a, b) => { return a.time - b.time }); 
-            callback(docs);
-        }
-    });
-}
-
 function getRenderObjectForRequest(req) {
     return getRenderObject(parseUserForTemplates(req));
 }
@@ -500,8 +245,19 @@ function errorObject(message) {
     };
 }
 
+function loadRules(callback) {
+    fs.readFile('public/html/rules.html', function(err, data) {
+        if(err) {
+            console.error("Failed to read rules");
+            callback();
+        } else {
+            callback(data);
+        }
+    });
+}
+
 app.get("/", function (req, res) {
-    getAllGroups((groups) => {
+    db.findAllGroups((groups) => {
         let renderDataObj = getRenderObjectForRequest(req);
         renderDataObj.notHome = false;
         renderDataObj.groups = groups;
@@ -512,7 +268,7 @@ app.get("/", function (req, res) {
 app.get("/admin", function (req, res) {
     const user = parseUserForTemplates(req);
     if(user && user.admin) {
-        getAllUsersAndGroups((users, groups) => {
+        db.findAllUsersAndGroups((users, groups) => {
             let renderDataObj = getRenderObject(user);
             renderDataObj.users = users;
             renderDataObj.groups = groups;
@@ -530,7 +286,7 @@ app.get('/yells/:group/:year/:date?', [ check("year").isLength({min: 4, max: 4})
     const year = req.params["year"];
     const date = req.params["date"];
 
-    getGroupWithName(groupName, (group) => {
+    db.findGroupWithName(groupName, (group) => {
         if(group) {
             let query;
             if(date) {
@@ -539,7 +295,7 @@ app.get('/yells/:group/:year/:date?', [ check("year").isLength({min: 4, max: 4})
                 query = { $and: [ { "group": group._id }, { "year": Number(year) }] };
             }
 
-            getYells(query, (yells) => {
+            db.queryYells(query, (yells) => {
                 let resObj = {
                     "group": {
                         "id": group._id,
@@ -578,7 +334,7 @@ app.get('/groups/:group', function (req, res) {
     const groupName = req.params["group"];
     const user = parseUserForTemplates(req);
 
-    getGroupWithName(groupName, (group) => {
+    db.findGroupWithName(groupName, (group) => {
         if(group) {
             processGroupYear(user, res, group, year);
         } else {
@@ -636,7 +392,7 @@ app.post("/addGroup", [ check("name").isLength({min: 5}) ], (req, res) => {
         return;
     }
 
-    addGroup(user.id, name, (group) => {
+    db.addGroup(user.id, name, (group) => {
         res.redirect("groups/" + encodeURI(group.name));
     });
 });
@@ -649,8 +405,8 @@ app.post("/yell", [ check("group").isLength({min: 5}) ], (req, res) => {
         res.status(403).json(errorObject("Please login first"));
     } else {
         const groupId = req.body.group;
-        getGroupWithId(groupId, (group) => {
-            addYell(user, group._id, (yell) => {
+        db.findGroupWithId(groupId, (group) => {
+            db.addYell(user.id, group._id, getNow(), (yell) => {
                 if(yell) {
                     res.json({ "id": yell._id });
                 } else {
@@ -668,8 +424,4 @@ app.listen(process.env.HTTP_PORT, () => {
 });
 
 // Schedule timer for midnight of each day
-/*
-let job = schedule.scheduleJob("1 0 0 1-25 12", function(fireDate){
-    console.log('This job was supposed to run at ' + fireDate + ', but actually ran at ' + new Date());
-  });
-  */
+const schedule = new scheduler(process.env.TIMEZONE);
