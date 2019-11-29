@@ -32,10 +32,10 @@ export class Scheduler {
             + " " + beforeMidnightInSystem.minutes()
             + " " + beforeMidnightInSystem.hours()
             + " * 11-12 *";
-        if(debugMode) {
-            console.warn("Override scheduling with debug mode");
-            beforeMidnightScheduling = "0 58 * * * *";
-        }
+        //if(debugMode) {
+        //    console.warn("Override scheduling with debug mode");
+        //    beforeMidnightScheduling = "0 58 * * * *";
+        //}
 
         // --- Past midnight to find winners ---
         let pastMidnightScheduling = 
@@ -43,10 +43,10 @@ export class Scheduler {
             + " " + postMidnightInSystem.minutes()
             + " " + postMidnightInSystem.hours()
             + " * 11-12 *";
-        if(debugMode) {
-            console.warn("Override scheduling with debug mode");
-            pastMidnightScheduling = "1 0 * * * *";
-        }
+        //if(debugMode) {
+        //    console.warn("Override scheduling with debug mode");
+        //    pastMidnightScheduling = "1 0 * * * *";
+        //}
 
         const that = this;
 

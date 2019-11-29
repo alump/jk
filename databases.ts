@@ -323,10 +323,7 @@ export class Databases {
     _queryDoc<T>(db: Nedb<T>, docType : string, query : any, callback: (docs : T | undefined) => void) {
         db.findOne(query, (err : Error, doc : T) => {
             if(err) {
-                this._handleSingleError(query, err, "Failed to load a score", callback);
-                console.error(err.message);
-                console.error("Failed to load " + docType + " for: " + JSON.stringify(query));
-                callback(undefined);
+                this._handleSingleError(query, err, "Failed to load a " + docType, callback);
             } else {
                 callback(doc);
             }
@@ -378,12 +375,12 @@ export class Databases {
     }
 
     findTargetsForGroup(groupId : string, year : number, callback : (docs: object[]) => void) {
-        const query = { $and: { "groupId" : groupId, "year" : year } };
+        const query = { $and: [ { "groupId" : groupId, "year" : year } ] };
         this.queryTargets(query, callback);
     }
 
     findTarget(groupId : string, year : number, date : string, callback : (doc: Target | undefined) => void) {
-        const query = { $and: { "groupId" : groupId, "year" : year, "date": date } };
+        const query = { $and: [ { "groupId" : groupId }, {"year" : year}, {"date": date } ] };
         this.queryTarget(query, callback);
     }
 
