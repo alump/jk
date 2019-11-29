@@ -375,7 +375,7 @@ export class Databases {
     }
 
     findTargetsForGroup(groupId : string, year : number, callback : (docs: object[]) => void) {
-        const query = { $and: [ { "groupId" : groupId, "year" : year } ] };
+        const query = { $and: [ { "groupId" : groupId }, { "year" : year } ] };
         this.queryTargets(query, callback);
     }
 
@@ -475,7 +475,7 @@ export class Databases {
     }
 
     updateScore(userId : string, groupId : string, year : number, points : number, callback: (score : Score | undefined) => void) {
-        const scoreQuery = { $and: { "groupId": groupId, "userId": userId, "year": year } };
+        const scoreQuery = { $and: [ { "groupId": groupId }, { "userId": userId }, { "year": year } ] };
         this.queryScore(scoreQuery, (score) => {
             if(score) {
                 score.points = points;
@@ -630,7 +630,7 @@ export class Databases {
             if(user) {
                 //console.log("getUsersGroup, found user, now groups: " + user.groups.length);
                 this.findGroupsWithIds(user.groups, (groups) => {
-                    console.log("getUsersGroup, found groups: " + groups.length);
+                    //console.log("getUsersGroup, found groups: " + groups.length);
                     callback(groups);
                 });
             } else {
@@ -650,7 +650,7 @@ export class Databases {
     }
 
     findTargetsForYear(groupId : string, year : number, callback: (res : TargetsForYear) => void) {
-        const query = { "$and": { "groupId": groupId, "year": year }};
+        const query = { "$and": [ { "groupId": groupId }, { "year": year }]};
         this.queryTargets(query, (targets) => {
             //console.log("Found " + targets.length + " targets");
             const results = new TargetsForYear(year, groupId, targets);
