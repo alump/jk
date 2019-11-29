@@ -3,25 +3,23 @@ const dotenv = require('dotenv').config();
 const express = require("express");
 const exphbd = require("express-handlebars");
 const moment = require('moment-timezone');
-const crypto = require("crypto");
 const { check, validationResult } = require('express-validator');
-const uuidv1 = require('uuid/v1');
 const session = require('express-session');
 const passport = require('passport');
 const Auth0Strategy = require('passport-auth0');
 const request = require("request");
 const url = require('url');
 const util = require('util');
-const shuffle = require('shuffle-array');
 const fs = require('fs');
-const nedb = require('nedb');
 
 // Project files
-const databases = require("./dist/databases.js").Databases;
+const Databases = require("./dist/databases.js").Databases;
 const scheduler = require("./dist/scheduler.js").Scheduler;
+const Calendar = require("./dist/calendar.js").Calendar;
 const packageJson = require("./package.json");
 
-const db = new databases(process.env.DATABASE_PATH);
+const db = new Databases(process.env.DATABASE_PATH);
+const calendar = new Calendar(db, process.env.TIMEZONE, process.env.DEBUG_MODE);
 
 var app = express();
 app.use(express.urlencoded());
@@ -114,74 +112,22 @@ function parseUserForTemplates(req) {
     }
 }
 
-function randomInteger(min, max) {
-    return Math.floor(Math.random() * (max - min)) + min;
-}
-
-function loadDays(group, year) {
-    let days = [];
-    const now = getNow();
-    let calendarActive = now.year() == year;
-    calendarActive = calendarActive && (process.env.DEBUG_MODE || now.month() == 12);
-    const calendarDay = now.date();
-    const daysInCalendar = process.env.DEBUG_MODE ? 31 : 24;
-
-    for(i = 1; i <= daysInCalendar; ++i) {
-        let holeClassname = "hole";
-        let hatchClassname = "hatch";
-        let holeBgImage = undefined;
-        let points = undefined;
-        let open = false;
-        let hatchStyles = undefined;
-
-        const today = calendarActive == true && (calendarDay == i);
-        if(today) {
-            hatchClassname += " closed today";
-        } else if(calendarActive == true && (i < calendarDay)) {
-            holeClassname += " open";
-            hatchClassname += " open";
-            holeBgImage = "/images/banana.gif";
-            points = randomInteger(1, 26);
-            open = true;
-        } else {
-            hatchClassname += " closed";
-        }
-
-        if(open) {
-            //transform: rotate(0.5deg) scaleX(0.2);
-            const rotate = 0.5;
-            const scaleX = 0.15 + 0.2 * Math.random();
-            hatchStyles = "transform: rotate(" + rotate + "deg) scaleX(" + scaleX + ");";
-        }
-
-        days.push({
-            "day": i,
-            "winner": undefined,
-            "points": points,
-            "today": today,
-            "holeClassname": holeClassname,
-            "hatchClassname": hatchClassname,
-            "hatchStyles": hatchStyles,
-            "holeBgImage": holeBgImage,
-            "open": open
-        });
-    }
-    return shuffle(days);
-}
 
 function processGroupYear(user, res, group, year) {
 
     db.findScores(2019, group._id, (scores) => {
         db.findTargetsForGroup(group._id, year, (targets) => {
-            loadRules((rules) => {
-                let renderDataObj = getRenderObject(user);
-                renderDataObj.year = year;
-                renderDataObj.group = group;
-                renderDataObj.scores = scores;
-                renderDataObj.calendar = loadDays(group, year);
-                renderDataObj.title = "JK " + group.name + " " + year;
-                renderDataObj.rules = rules;
-                res.render("group", renderDataObj);
+            calendar.loadCalendar(year, group._id, (calendar) => {
+                loadRules((rules) => {
+                    let renderDataObj = getRenderObject(user);
+                    renderDataObj.year = year;
+                    renderDataObj.group = group;
+                    renderDataObj.scores = scores;
+                    renderDataObj.calendar = calendar;
+                    renderDataObj.title = "JK " + group.name + " " + year;
+                    renderDataObj.rules = rules;
+                    res.render("group", renderDataObj);
+                });
             });
         });
     });

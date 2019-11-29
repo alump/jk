@@ -29,6 +29,7 @@
     "@types/moment-timezone": "^0.5.12",
     "@types/nedb": "^1.8.9",
     "@types/node-schedule": "^1.2.4",
+    "@types/shuffle-array": "0.0.28",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "express-handlebars": "^3.1.0",

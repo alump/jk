@@ -110,6 +110,7 @@ export class Scheduler {
         let bestDiff = 60 * 60 * 25;
         let points = 0;
         let leader : string | undefined;
+        let winningYellId : string | undefined;
         const targetMoment = moment.tz(target);
 
         yells.forEach(yell => {
@@ -119,10 +120,14 @@ export class Scheduler {
                 bestDiff = yellDiff;
                 points = this._secondDiffToPoints(yellDiff);
                 leader = yell.user.id;
+                winningYellId = yell._id;
             }
         });
 
         if(leader) {
+            if(winningYellId) {
+                this.db.updateYell(winningYellId, true, points);
+            }
             callback(leader, points);
         }
     }

@@ -41,6 +41,8 @@ export class Yell extends Document {
     year: number;
     groupId: string;
     ignoredYells: string[];
+    winning: boolean;
+    points: number;
 
     constructor(user : YellUser, groupId : string, moment : moment.Moment) {
         super();
@@ -50,6 +52,8 @@ export class Yell extends Document {
         this.time = moment.format();
         this.groupId = groupId;
         this.ignoredYells = [];
+        this.winning = false;
+        this.points = 0;
     }
 }
 
@@ -239,6 +243,11 @@ export class Databases {
         this.yells.ensureIndex({"fieldName": "groupId"}, (err : Error) => {
             if(err) {
                 console.error("Failed to index group on yells:" + err.message);
+            }
+        });
+        this.yells.ensureIndex({"fieldName": "winning"}, (err : Error) => {
+            if(err) {
+                console.error("Failed to index winning on yells:" + err.message);
             }
         });
 
@@ -441,6 +450,11 @@ export class Databases {
         this.queryYells(query, callback);
     }
 
+    findWinningYells(year : number, groupId : string, callback: (yells: Yell[]) => void) {
+        const query = { $and: [ { "groupId": groupId }, { "year": year }, { "winning": true }] };
+        this.queryYells(query, callback);
+    }
+
     addGroup(userId : string, name : string, callback: (doc: Group | undefined) => void) {
         this.findGroupWithName(name, (doc) => {
             if(doc) {
@@ -605,7 +619,7 @@ export class Databases {
     }
 
     updateUserGroups(userId : string, groupIds : string[]) {
-        console.log("Updating groups of user " + userId);
+        //console.log("Updating groups of user " + userId);
         this.users.update( { "_id": userId }, { "$set": { "groups": groupIds }}, {}, (err, numberOfUpdated, upsert) => {
             if(err) {
                 console.error("Failed to update user's groups");
@@ -617,7 +631,7 @@ export class Databases {
     findUsersGroups(userId : string, callback: ( groups: Group[]) => void) {
         this.findUserWithId(userId, (user) => {
             if(user) {
-                console.log("getUsersGroup, found user, now groups: " + user.groups.length);
+                //console.log("getUsersGroup, found user, now groups: " + user.groups.length);
                 this.findGroupsWithIds(user.groups, (groups) => {
                     console.log("getUsersGroup, found groups: " + groups.length);
                     callback(groups);
@@ -641,9 +655,18 @@ export class Databases {
     findTargetsForYear(groupId : string, year : number, callback: (res : TargetsForYear) => void) {
         const query = { "$and": { "groupId": groupId, "year": year }};
         this.queryTargets(query, (targets) => {
-            console.log("Found " + targets.length + " targets");
+            //console.log("Found " + targets.length + " targets");
             const results = new TargetsForYear(year, groupId, targets);
             callback(results);
+        });
+    }
+
+    updateYell(yellId : string, winner: boolean, points: number) {
+        this.yells.update({ "_id": yellId }, { "$set": { "winner": winner, "points": points }}, {}, (err, numberOfUpdated, upsert) => {
+            if(err) {
+                console.error("Failed to update yell");
+                console.error(err.message);
+            }
         });
     }
 }

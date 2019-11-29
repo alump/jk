@@ -69,6 +69,9 @@ function showYells(targetId, data) {
 
     data.yells.forEach(yell => {
         let row = document.createElement("tr");
+        if(yell.winning) {
+            row.className = "winner";
+        }
         let mtime = moment(yell.time);
         let ttime = yell.target ? moment(yell.target) : undefined;
         let diff = ttime ? ("" + ttime.diff(mtime, "seconds") + " s") : "n/a";
