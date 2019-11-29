@@ -9,6 +9,7 @@
     --main-bg-color: #600;
     --header-bg-color: rgba(0,0,0,0.2);
     --border-radius-field: 5px;
+    --light-text-color: #FCC;
  }
 
 body {
@@ -152,6 +153,18 @@ header h1 b {
     color: white;
 }
 
+header h1.debug::after {
+    display: inline-block;
+    background: rgba(0,0,0,0.33);
+    color: white;
+    line-height: 18px;
+    font-size: 16px;
+    font-family: monospace;
+    border-radius: 10px;
+    padding: 2px 20px;
+    content: "Debugging";
+}
+
 header .profile {
     height: 50px;
     width: 50px;
@@ -193,6 +206,7 @@ footer {
     flex-direction: row;
     flex-wrap: wrap;
     justify-content: space-evenly;
+    max-width: 680px;
 }
 
 .calendar .hole-wrapper {
@@ -362,13 +376,14 @@ button {
     text-transform: uppercase;
 }
 
-.calendar-section .info {
+details .info, section .info {
     margin: 0em 0em 1em 0em;
+    color: var(--light-text-color);
 }
 
 ul.rules {
     list-style-type: upper-roman;
-    color: #FCC;
+    color: var(--light-text-color);
 }
 
 ul.rules b {

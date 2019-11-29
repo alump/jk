@@ -1,6 +1,8 @@
 import Nedb = require('nedb');
-import Moment = require('moment-timezone');
 import moment = require('moment-timezone');
+import session = require('express-session');
+import e = require('express');
+import { throws } from 'assert';
 
 const DATABASES_DATE_FORMAT : string = "YYYY-MM-DD";
 
@@ -40,7 +42,7 @@ export class Yell extends Document {
     groupId: string;
     ignoredYells: string[];
 
-    constructor(user : YellUser, groupId : string, moment : Moment.Moment) {
+    constructor(user : YellUser, groupId : string, moment : moment.Moment) {
         super();
         this.user = user;
         this.year = moment.year();
@@ -87,20 +89,111 @@ export class Target extends Document {
         this.date = date;
         this.time = time;
     }
+
+    hasDate(date : string) {
+        return this.date === date;
+    }
+}
+
+export class TargetsForYear {
+    year: number;
+    groupId: string;
+    targets : Target[];
+
+    constructor(year : number, groupId : string, targets : Target[]) {
+        this.year = year;
+        this.groupId = groupId;
+        this.targets = targets;
+    }
+
+    findTimeForDate(date : string) : any {
+        let target = this.targets.find(t => t.hasDate(date))
+        return target ? target.time : undefined;
+    }
+}
+
+class StoredSession {
+    sid: string;
+    data: string;
+    created: string;
+
+    constructor(sid : string, data : string) {
+        this.sid = sid;
+        this.data = data;
+        this.created = moment().format();
+    }
+}
+
+export class SessionStore extends session.Store {
+    db: Nedb<StoredSession>;
+
+    constructor(fullPath : string) {
+        super();
+        this.db = new Nedb<StoredSession>(fullPath);
+        this.db.loadDatabase();
+        this.db.ensureIndex({ "fieldName": "sid", "unique": true }, (err : Error) => {
+            if(err) {
+                console.error("Failed to index sid on sessioss: " + err.message);
+            }
+        });
+
+        this.get = (sid, callback) => {
+            //console.log("Getting session: " + sid);
+            this.db.findOne({ "sid": sid }, (err, doc) => {
+                if(err) {
+                    console.error("Failed to get session: " + err.message);
+                } else {
+                    //console.log("Got session: " + doc);
+                    if(doc && doc.data) {
+                        callback(err, JSON.parse(doc.data));
+                    } else {
+                        callback(err, undefined);
+                    }
+                }
+            });
+        };
+
+        this.set = (sid, session, callback) => {
+            //console.log("Setting session: " + sid);
+            let storeSession = new StoredSession(sid, JSON.stringify(session));
+            this.db.update({ "sid": sid }, storeSession, { "multi": false, "upsert" : true}, (err, numberOfUpdated, upsert) => {
+                //console.log("Set session: " + numberOfUpdated + " " + upsert);
+                if(callback) {
+                    callback(err);
+                }
+            });
+        }
+
+        this.destroy = (sid, callback) => {
+            console.log("Destroying session: " + sid);
+            this.db.remove({ "sid": sid }, {}, (err, removedCount) => {
+                console.log("Destroyed session: " + removedCount);
+                if(callback) {
+                    callback(err);
+                }
+            });
+        }
+    }
+
 }
 
 export class Databases {
 
     path: string;
+    timezone : string;
+
     users: Nedb<User>;
     groups: Nedb<Group>;
     yells: Nedb<Yell>;
     scores: Nedb<Score>;
     targets: Nedb<Target>;
+    
+    sessions: SessionStore;
 
-    constructor(path : string) {
+    constructor(path : string, timezone : string) {
 
         this.path = path;
+        this.timezone = timezone;
 
         // --- Users ---
         this.users = new Nedb<User>(path + "/users.db");
@@ -186,6 +279,8 @@ export class Databases {
                 console.error("Failed to index date on targets: " + err.message);
             }
         });
+
+        this.sessions = new SessionStore(path + "/sessions.db");
     }
 
     _handleSingleError<T>(query : any, error: Error, message: string, callback: (doc: T | undefined) => void) {
@@ -230,7 +325,7 @@ export class Databases {
     }
 
     _getNow() : string {
-        return Moment.tz().format();
+        return moment.tz(this.timezone).format();
     }
 
     queryTargets(query : any, callback: (docs : Target[]) => void) {
@@ -298,9 +393,14 @@ export class Databases {
         this.queryGroup(query, callback);
     }
     
-    findGroupWithId(id : string, callback: (doc : object | undefined) => void) {
+    findGroupWithId(id : string, callback: (doc : Group | undefined) => void) {
         const query = { "_id": id };
         this.queryGroup(query, callback);
+    }
+
+    findGroupsWithIds(ids : string[], callback: (doc : Group[]) => void) {
+        const query = { "_id": { $in: ids } };
+        this.queryGroups(query, callback);
     }
 
     findAllUsers(callback: (docs: object[]) => void) {
@@ -331,18 +431,30 @@ export class Databases {
         this._queryDoc<Yell>(this.yells, "users", query, callback);
     }
 
+    findYellsForGroup(year : number, groupId : string, callback: (yells : Yell[])=> void) {
+        const query = { $and: [ { "groupId": groupId }, { "year": Number(year) }] };
+        this.queryYells(query, callback);
+    }
+
+    findYellsForDay(year : number, groupId : string, date : string, callback: (yells : Yell[])=> void) {
+        const query = { $and: [ { "groupId": groupId }, { "year": year }, { "date": date }] };
+        this.queryYells(query, callback);
+    }
+
     addGroup(userId : string, name : string, callback: (doc: Group | undefined) => void) {
         this.findGroupWithName(name, (doc) => {
-            if(!doc) {
+            if(doc) {
+                console.error("There is already group with given name!");
                 callback(undefined);
             } else {
+                console.log("Adding group: " +name);
                 let doc = new Group();
                 doc.name = name;
                 doc.createdAt = this._getNow();
                 doc.createdBy = userId;
                 this.groups.insert(doc, (err, finalDoc) => {
                     if(err) {
-                        callback(undefined);
+                        this._handleSingleError(doc, err, "Failed to add group", callback);
                     } else {
                         callback(finalDoc);
                     }
@@ -351,11 +463,11 @@ export class Databases {
         });
     }
 
-    updateScore(userId : string, groupId : string, year : number, pointDiff : number, callback: (score : Score | undefined) => void) {
+    updateScore(userId : string, groupId : string, year : number, points : number, callback: (score : Score | undefined) => void) {
         const scoreQuery = { $and: { "groupId": groupId, "userId": userId, "year": year } };
         this.queryScore(scoreQuery, (score) => {
             if(score) {
-                score.points += pointDiff;
+                score.points = points;
                 this.scores.update({ "_id": score._id }, { $set: { "points": score.points }}, {}, (err, updated) => {
                     if(err) {
                         this._handleSingleError(undefined, err, "Failed to update a score", callback);
@@ -364,7 +476,7 @@ export class Databases {
                     }
                 });
             } else {
-                let newScore = new Score(userId, groupId, year, pointDiff);
+                let newScore = new Score(userId, groupId, year, points);
                 this.scores.insert(newScore, (err, newDoc) => {
                     if(err) {
                         this._handleSingleError(newScore, err, "Failed to insert a score", callback);
@@ -407,7 +519,7 @@ export class Databases {
         });
     }
 
-    addYell(userId : string, groupId : string, now : Moment.Moment, callback: (yell: Yell | undefined) => void) {
+    addYell(userId : string, groupId : string, now : moment.Moment, callback: (yell: Yell | undefined) => void) {
         const year = now.year();
         const date = this.formatDate(now);
         const time = now.format();
@@ -434,6 +546,13 @@ export class Databases {
                         console.error("Failed to find user with id " + userId);
                         callback(undefined);
                     } else {
+                        // Add user to group if not there already
+                        if(!user.groups.find(g => g === groupId)) {
+                            user.groups.push(groupId);
+                            this.updateUserGroups(userId, user.groups);
+                        }
+
+                        // All new yell
                         let yellUser = new YellUser(userId, user.name, user.email, user.picture);
                         let newYell = new Yell(yellUser, groupId, now);
                         this.yells.insert(newYell, (err, newYell) => {
@@ -485,8 +604,46 @@ export class Databases {
         })
     }
 
+    updateUserGroups(userId : string, groupIds : string[]) {
+        console.log("Updating groups of user " + userId);
+        this.users.update( { "_id": userId }, { "$set": { "groups": groupIds }}, {}, (err, numberOfUpdated, upsert) => {
+            if(err) {
+                console.error("Failed to update user's groups");
+                console.error(err.message);
+            }
+        });
+    }
+
+    findUsersGroups(userId : string, callback: ( groups: Group[]) => void) {
+        this.findUserWithId(userId, (user) => {
+            if(user) {
+                console.log("getUsersGroup, found user, now groups: " + user.groups.length);
+                this.findGroupsWithIds(user.groups, (groups) => {
+                    console.log("getUsersGroup, found groups: " + groups.length);
+                    callback(groups);
+                });
+            } else {
+                console.error("Failed to find user");
+                callback([]);
+            }
+        });
+    }
+
 
     formatDate(moment : moment.Moment) : string {
         return moment.format(DATABASES_DATE_FORMAT);
+    }
+
+    getSessionsStore() : session.Store {
+        return this.sessions;
+    }
+
+    findTargetsForYear(groupId : string, year : number, callback: (res : TargetsForYear) => void) {
+        const query = { "$and": { "groupId": groupId, "year": year }};
+        this.queryTargets(query, (targets) => {
+            console.log("Found " + targets.length + " targets");
+            const results = new TargetsForYear(year, groupId, targets);
+            callback(results);
+        });
     }
 }

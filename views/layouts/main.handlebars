@@ -18,23 +18,25 @@
     </head>
     <body>
         <header>
-        <h1><b>J</b>oulukalenteri<b>K</b>isa</h1>
-        <div id="actions">
-        {{#if notHome}}
-            <a href="{{rootUrl}}">🏠</a>
-        {{/if}}
-        {{#if user}}
-            {{#if user.admin}}
-            <a href="{{rootUrl}}admin">Hallinta</a>
+            <h1 {{#if debug}}class="debug"{{/if}}>
+                <b>J</b>oulukalenteri<b>K</b>isa
+            </h1>
+            <div id="actions">
+            {{#if notHome}}
+                <a href="{{rootUrl}}">🏠</a>
             {{/if}}
-        <a href="{{rootUrl}}logout">Kirjaudu ulos</a>
-        {{else}}
-        <a href="{{rootUrl}}login">Kirjaudu sisään</a>
-        {{/if}}
-        </div>
-        {{#if user}}{{#if user.picture}}
-        <img src="{{user.picture}}" class="profile">
-        {{/if}}{{/if}}
+            {{#if user}}
+                {{#if user.admin}}
+                <a href="{{rootUrl}}admin">Hallinta</a>
+                {{/if}}
+            <a href="{{rootUrl}}logout">Kirjaudu ulos</a>
+            {{else}}
+            <a href="{{rootUrl}}login">Kirjaudu sisään</a>
+            {{/if}}
+            </div>
+            {{#if user}}{{#if user.picture}}
+            <img src="{{user.picture}}" class="profile">
+            {{/if}}{{/if}}
         </header>
 
         {{{body}}}

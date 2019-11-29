@@ -35,7 +35,8 @@ var sess = {
         maxAge: 1000 * 60 * 60 * 24 * 14 
     },
     resave: false,
-    saveUninitialized: true
+    saveUninitialized: true,
+    store: db.getSessionsStore()
 };
 
 if (app.get('env') === 'production') {
@@ -120,11 +121,12 @@ function randomInteger(min, max) {
 function loadDays(group, year) {
     let days = [];
     const now = getNow();
-    //const calendarActive = now.year() == year && now.month == 12;
-    const calendarActive = true;
-    const calendarDay = 13;
+    let calendarActive = now.year() == year;
+    calendarActive = calendarActive && (process.env.DEBUG_MODE || now.month() == 12);
+    const calendarDay = now.date();
+    const daysInCalendar = process.env.DEBUG_MODE ? 31 : 24;
 
-    for(i = 1; i < 25; ++i) {
+    for(i = 1; i <= daysInCalendar; ++i) {
         let holeClassname = "hole";
         let hatchClassname = "hatch";
         let holeBgImage = undefined;
@@ -132,10 +134,10 @@ function loadDays(group, year) {
         let open = false;
         let hatchStyles = undefined;
 
-        const today = calendarActive && calendarDay == i;
+        const today = calendarActive == true && (calendarDay == i);
         if(today) {
             hatchClassname += " closed today";
-        } else if(calendarActive && i < calendarDay) {
+        } else if(calendarActive == true && (i < calendarDay)) {
             holeClassname += " open";
             hatchClassname += " open";
             holeBgImage = "/images/banana.gif";
@@ -232,7 +234,8 @@ function getRenderObject(user) {
         "rootUrl": process.env.ROOT_URL,
         "user": user,
         "notHome": true,
-        "timeZone": process.env.TIMEZONE
+        "timeZone": process.env.TIMEZONE,
+        "debug": process.env.DEBUG_MODE
     };
     return renderObject;
 }
@@ -261,7 +264,15 @@ app.get("/", function (req, res) {
         let renderDataObj = getRenderObjectForRequest(req);
         renderDataObj.notHome = false;
         renderDataObj.groups = groups;
-        res.render("home", renderDataObj);
+
+        if(renderDataObj.user) {
+            db.findUsersGroups(renderDataObj.user.id, (userGroups) => {
+                renderDataObj.userGroups = userGroups;
+                res.render("home", renderDataObj);
+            });
+        } else {
+            res.render("home", renderDataObj);
+        }
     });
 });
 
@@ -285,27 +296,37 @@ app.get('/yells/:group/:year/:date?', [ check("year").isLength({min: 4, max: 4})
     const groupName = req.params["group"];
     const year = req.params["year"];
     const date = req.params["date"];
+    //TODO: make sure date is in the past
 
     db.findGroupWithName(groupName, (group) => {
         if(group) {
-            let query;
-            if(date) {
-                query = { $and: [ { "group": group._id }, { "year": Number(year) }, { "date": date }] };
-            } else {
-                query = { $and: [ { "group": group._id }, { "year": Number(year) }] };
-            }
-
-            db.queryYells(query, (yells) => {
-                let resObj = {
-                    "group": {
-                        "id": group._id,
-                        "name": group.name
-                    },
-                    "year": year,
-                    "date": date,
-                    "yells": yells
+            db.findTargetsForYear(year, group._id, (targetsForYear) => {
+                let query;
+                if(date) {
+                    query = { $and: [ { "groupId": group._id }, { "year": Number(year) }, { "date": date }] };
+                } else {
+                    query = { $and: [ { "groupId": group._id }, { "year": Number(year) }] };
                 }
-                res.json(resObj);
+
+                db.queryYells(query, (yells) => {
+                    yells.forEach(y => y.target = targetsForYear.findTimeForDate(y.date));
+
+                    let resObj = {
+                        "group": {
+                            "id": group._id,
+                            "name": group.name
+                        },
+                        "year": year,
+                        "date": date,
+                        "yells": yells
+                    }
+
+                    if(date) {
+                        resObj.target = targetsForYear.findTimeForDate(date);
+                    }
+
+                    res.json(resObj);
+                });
             });
         } else {
             res.status(500).json(errorObject)
@@ -375,7 +396,7 @@ app.get('/logout', (req, res) => {
     var logoutURL = new url.URL(
       util.format('https://%s/v2/logout', process.env.AUTH0_DOMAIN)
     );
-    var searchString = querystring.stringify({
+    var searchString = JSON.stringify({
       client_id: process.env.AUTH0_CLIENT_ID,
       returnTo: returnTo
     });
@@ -424,4 +445,4 @@ app.listen(process.env.HTTP_PORT, () => {
 });
 
 // Schedule timer for midnight of each day
-const schedule = new scheduler(process.env.TIMEZONE);
+const schedule = new scheduler(process.env.TIMEZONE, db, process.env.DEBUG_MODE);

@@ -41,6 +41,9 @@ function showYells(targetId, data) {
     let infoText = data.group.name + " (" + data.year + ")";
     if(data.date) {
         infoText += " " + data.date;
+        if(data.target) {
+            infoText += " " + moment(data.time).format("LTS");
+        }
     }
     infoText += ":";
     let infoElement = document.createElement("div");
@@ -55,6 +58,10 @@ function showYells(targetId, data) {
     let headerRow = document.createElement("tr");
     createCell(headerRow, "th", "Päivä");
     createCell(headerRow, "th", "Aika");
+    if(!data.date) {
+        createCell(headerRow, "th", "Kohde");
+    }
+    createCell(headerRow, "th", "Ero");
     createCell(headerRow, "th", "Huutaja");
     createCell(headerRow, "th", "Huutoja");
     table.appendChild(headerRow);
@@ -63,9 +70,16 @@ function showYells(targetId, data) {
     data.yells.forEach(yell => {
         let row = document.createElement("tr");
         let mtime = moment(yell.time);
+        let ttime = yell.target ? moment(yell.target) : undefined;
+        let diff = ttime ? ("" + ttime.diff(mtime, "seconds") + " s") : "n/a";
+        let ttimepres = ttime ? ttime.format("LTS") : "n/a";
 
         createCell(row, "td", mtime.format("L"));
         createCell(row, "td", mtime.format("LTS"));
+        if(!data.date) {
+            createCell(row, "td", ttimepres);
+        }
+        createCell(row, "td", diff);
         createCell(row, "td", yell.user.name);
         createCell(row, "td", 1 + yell.ignoredYells.length);
         table.appendChild(row);

@@ -2,9 +2,23 @@
 Hei {{user.displayName}}!
 {{/if}}
 
+{{#if userGroups}}
+<details open>
+    <summary>Omat ryhmäsi</summary>
+    <div class="info">
+        Ryhmät joiden alla olet osallistunut kilpailuun ainakin kerran näkyvät tässä listassa.
+    </div>
+    <ul>
+    {{#each groups}}
+        <li><a href="groups/{{name}}">{{name}}</a></li>
+    {{/each}}
+    </ul>
+</details>
+{{/if}}
+
 {{#if groups}}
 <details>
-    <summary>Ryhmät</summary>
+    <summary>Kaikki ryhmät</summary>
 
     <ul>
     {{#each groups}}

@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/alump/Joulukalenteri#readme",
   "dependencies": {
+    "@types/express-session": "^1.15.16",
     "@types/moment-timezone": "^0.5.12",
     "@types/nedb": "^1.8.9",
     "@types/node-schedule": "^1.2.4",

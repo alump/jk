@@ -1,36 +1,64 @@
 import moment = require('moment-timezone');
 import nodeSchedule = require('node-schedule');
-import { Databases } from './databases';
+import { Databases, Yell, Group, TargetsForYear } from './databases';
 
 export class Scheduler {
 
     targetTimezone : string;
     db : Databases;
-    _job : nodeSchedule.Job;
+    debugMode : boolean;
 
-    constructor(targetTimezone : string, db : Databases) {
+    _beforeMidnightJob :nodeSchedule.Job;
+    _pastMidnightJob : nodeSchedule.Job;
+
+    constructor(targetTimezone : string, db : Databases, debugMode : boolean) {
 
         this.targetTimezone = targetTimezone;
         this.db = db;
+        this.debugMode = debugMode;
 
         const nowInTarget = moment.tz(targetTimezone);
-        const compareDate = nowInTarget.year() + "-12-01 00:00:01";
-        const midnightInTarget = moment.tz(compareDate, targetTimezone);
-        console.log("Target time: " + midnightInTarget.format());
+
+        const beforeMidnightInTarget = moment.tz(nowInTarget.year() + "-11-30 23:55:00", targetTimezone);
+        const pastMidnightInTarget = moment.tz(nowInTarget.year() + "-12-01 00:00:01", targetTimezone);
         const systemTimezone = moment.tz.guess();
-        const midnightInSystem = midnightInTarget.tz(systemTimezone);
-        console.log("System time: " + midnightInSystem.format());
 
-        const scheduleString =
-            midnightInSystem.seconds()
-            + " " + midnightInSystem.minutes()
-            + " " + midnightInSystem.hours()
+        const beforeMidnightInSystem = beforeMidnightInTarget.tz(systemTimezone);
+        const postMidnightInSystem = pastMidnightInTarget.tz(systemTimezone);
+
+        // --- Before midnight to update targets
+        let beforeMidnightScheduling = 
+            beforeMidnightInSystem.seconds()
+            + " " + beforeMidnightInSystem.minutes()
+            + " " + beforeMidnightInSystem.hours()
             + " * 11-12 *";
+        if(debugMode) {
+            console.warn("Override scheduling with debug mode");
+            beforeMidnightScheduling = "0 58 * * * *";
+        }
 
-        console.log("Scheduling midnight checks to: " + scheduleString);
+        // --- Past midnight to find winners ---
+        let pastMidnightScheduling = 
+            postMidnightInSystem.seconds()
+            + " " + postMidnightInSystem.minutes()
+            + " " + postMidnightInSystem.hours()
+            + " * 11-12 *";
+        if(debugMode) {
+            console.warn("Override scheduling with debug mode");
+            pastMidnightScheduling = "1 0 * * * *";
+        }
 
         const that = this;
-        this._job = nodeSchedule.scheduleJob(scheduleString, (fireDate) => that.afterMidnightCheck());
+
+        console.log("Scheduling before midnight checks to: " + beforeMidnightScheduling);
+        this._beforeMidnightJob = nodeSchedule.scheduleJob(beforeMidnightScheduling, (fireDate) => that.beforeMidnightCheck());
+        
+        console.log("Scheduling past midnight checks to: " + pastMidnightScheduling);
+        this._pastMidnightJob = nodeSchedule.scheduleJob(pastMidnightScheduling, (fireDate) => that.afterMidnightCheck());
+    }
+
+    _getNow() : moment.Moment {
+        return moment.tz(this.targetTimezone);
     }
 
     _randomInteger(min : number, max : number) : number {
@@ -49,16 +77,113 @@ export class Scheduler {
         return random.hour(randomHours).min(randomMinutes).second(randomSeconds);
     }
 
-    afterMidnightCheck() {
+    _yellArrayToDates(yells : Yell[]) : string[] {
+        let dates : string[] = [];
+
+        yells.map(y => y.date).forEach(date => {
+            if(!dates.includes(date)) {
+                dates.push(date);
+            }
+        });
+
+        return dates;
+    }
+
+    _yellArrayToUserIds(yells : Yell[]) : string[] {
+        let userIds : string[] = [];
+
+        yells.map(y => y.user.id).forEach(userId => {
+            if(userId && !userIds.includes(userId)) {
+                userIds.push(userId);
+            }
+        });
+
+        return userIds;
+;
+    }
+
+    _secondDiffToPoints(seconds : number) {
+        return Math.floor(seconds / 60 / 60) + 1;
+    }
+
+    _findWinnerForDay(yells : Yell[], target : string, callback: (userId : string, points : number) => void) {
+        let bestDiff = 60 * 60 * 25;
+        let points = 0;
+        let leader : string | undefined;
+        const targetMoment = moment.tz(target);
+
+        yells.forEach(yell => {
+            let yellMoment = moment().tz(yell.time);
+            let yellDiff = Math.abs(yellMoment.diff(targetMoment, "seconds"));
+            if(yellDiff < bestDiff) {
+                bestDiff = yellDiff;
+                points = this._secondDiffToPoints(yellDiff);
+                leader = yell.user.id;
+            }
+        });
+
+        if(leader) {
+            callback(leader, points);
+        }
+    }
+
+    _convertToScores(year : number, group : Group, targetsForYear : TargetsForYear, yells : Yell[]) {
+        const groupId = group._id;
+        const todayString = this.db.formatDate(this._getNow());
+
+        if(groupId) {
+            let dates = this._yellArrayToDates(yells);
+
+            let userIdToPoints : any = {};
+            this._yellArrayToUserIds(yells).forEach(userId => userIdToPoints[userId] = 0);
+
+            dates.filter(d => d < todayString).forEach(date => {
+                const targetOfTheDay = targetsForYear.findTimeForDate(date);
+                if(targetOfTheDay) {
+                    let yellsOfTheDay = yells.filter(y => y.date == targetOfTheDay);
+
+                    this._findWinnerForDay(yellsOfTheDay, targetOfTheDay, (winnerUserId, winnerPoints) => {
+                        userIdToPoints[winnerUserId] += winnerPoints;
+                    });
+
+                } else {
+                    console.error("Failed to locate target for day with yells! " + group._id + " " + date);
+                }
+            });
+
+            Object.keys(userIdToPoints).forEach(userId => {
+                this.db.updateScore(userId, groupId, year, userIdToPoints[userId], (score) => {
+                });
+            });
+        }
+    }
+
+    recalculateScores() {
+        const now = this._getNow();
+        const year = now.year();
+
+        this.db.findAllGroups((groups) => {
+            groups.forEach(group => {
+                if(group._id) {
+                    const groupId : string = group._id;
+                    this.db.findTargetsForYear(groupId, year, (yearTargets) => {
+                        this.db.findYellsForGroup(year, groupId, (yells) => {
+                            this._convertToScores(year, group, yearTargets, yells);
+                        });
+                    });
+                }
+            });
+        });
+    }
+
+    beforeMidnightCheck() {
+        console.log("Before midnight check at " + this._getNow().format);
+
         const today = moment.tz(this.targetTimezone);
         const yesterday = today.add(-1, "days");
 
         console.log("Yesterday: " + yesterday.format());
         console.log("Today: " + today.format());
-
-        const todayYear = today.year();
-        const todayDate = this.db.formatDate(today);
-
 
         this.db.findAllGroups((groups) => {
             groups.forEach(group => {
@@ -75,5 +200,10 @@ export class Scheduler {
                 }
             });
         });
+    }
+
+    afterMidnightCheck() {
+        console.log("After midnight check at " + this._getNow().format);
+        this.recalculateScores();
     }
 }
