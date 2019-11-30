@@ -68,11 +68,11 @@ export class Calendar {
     _generateDays(year : number, groupId : string, winningYells : Yell[], todaysYell : Yell | undefined) : CalendarDay[] {
         let days = [];
         const now = this._getNow();
+        const month = now.month() + 1;
         let calendarActive = (now.year() == year);
-        calendarActive = calendarActive && (this.debugMode || now.month() == 12);
+        calendarActive = calendarActive && (this.debugMode || month == 12);
         const calendarDay = now.date();
         const daysInCalendar = this.debugMode ? 31 : 24;
-        const month = this.debugMode ? now.month() : 12;
     
         for(let i = 1; i <= daysInCalendar; ++i) {
             let day = new CalendarDay(year, month, i);

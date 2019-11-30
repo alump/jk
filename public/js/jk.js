@@ -118,5 +118,8 @@ function loadYells(targetId, url) {
             console.error("What went wrong?");
         }
     })
-    .catch(error => console.error(error.message));
+    .catch(error => {
+        window.alert(error.message);
+        console.error(error.message);
+    });
 }

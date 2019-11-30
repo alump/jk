@@ -369,10 +369,10 @@ app.post("/addGroup", [ check("name").isLength({min: 5}) ], (req, res) => {
 
 app.post("/yell", [ check("group").isLength({min: 5}) ], (req, res) => {
     const today = getNow();
-    if(today.month() != 12) {
+    if((today.month() + 1) != 12) {
         res.status(400).json(errorObject("Ei ole vielä joulukuu!"));
         return;
-    } else if(today().date() > 24) {
+    } else if(today.date() > 24) {
         res.status(400).json(errorObject("Joulu meni jo!"));
         return;
     }
