@@ -182,7 +182,7 @@ export class Scheduler {
     }
 
     beforeMidnightCheck() {
-        console.log("Before midnight check at " + this._getNow().format);
+        console.log("Before midnight check at " + this._getNow().format());
 
         const today = moment.tz(this.targetTimezone);
         const tomorrow = today.add(1, "days");
@@ -205,7 +205,7 @@ export class Scheduler {
     }
 
     afterMidnightCheck() {
-        console.log("After midnight check at " + this._getNow().format);
+        console.log("After midnight check at " + this._getNow().format());
         this.recalculateScores();
     }
 }
