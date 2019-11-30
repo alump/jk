@@ -22,7 +22,7 @@
                 <div class="shader"></div>
             </div>
             <div class="{{hatchClassname}}" style="{{hatchStyles}}"
-                {{#if today}}onclick="yell('{{../rootUrl}}yell', '{{../group._id}}')"{{/if}}
+                {{#if today}}onclick="yell(event, '{{../rootUrl}}yell', '{{../group._id}}')"{{/if}}
             >
                 <span class="day">{{day}}</span>
             </div>

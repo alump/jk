@@ -593,15 +593,8 @@ export class Databases {
         const query = { $and: [{ "year" : year}, { "groupId" : groupId}, { "date": date }]};
         this.queryTarget(query, (oldTarget) => {
             if(oldTarget) {
-                console.warn("Updating existing target: " + oldTarget._id);
-                oldTarget.time = time;
-                this.targets.update({ "_id": oldTarget._id }, { $set: { "time": oldTarget.time }}, {}, (err, nou, ups) => {
-                    if(err) {
-                        this._handleSingleError(null, err, "Failed to insert score", callback);
-                    } else {
-                        callback(oldTarget);
-                    }
-                });
+                console.warn("Target already exists: " + oldTarget._id);
+                callback(oldTarget);
             } else {
                 let newTarget = new Target(groupId, year, date, time);
                 this.targets.insert(newTarget, (err, newTarget) => {
@@ -665,5 +658,16 @@ export class Databases {
                 console.error(err.message);
             }
         });
+    }
+
+    findYellForDate(year : number, userId : string, groupId : string, date : string, callback: (yell : Yell | undefined) => void) {
+        if(userId) {
+            callback(undefined);
+        } else {
+            const query = { $and: [ { "year": year }, { "user.id": userId }, { "groupId": groupId }, { "date": date } ] };
+            this.queryYell(query, (yell) => {
+                callback(yell);
+            });
+        }
     }
 }

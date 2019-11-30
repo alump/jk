@@ -1,4 +1,4 @@
-function yell(url, groupId) {
+function yell(event, url, groupId) {
     console.log("Yelling at " + groupId);
     let request = {
         "group": groupId
@@ -16,6 +16,7 @@ function yell(url, groupId) {
         if(data.error) {
             console.error(data.error.message);
         } else if(data.id) {
+            event.target.classList.add("yelled");
             console.log("yelled " + data.id);
         } else {
             console.error("What went wrong?");
@@ -108,10 +109,12 @@ function loadYells(targetId, url) {
     .then(response => response.json())
     .then(data => {
         if(data.error) {
+            window.alert("FAIL: " + data.error.message);
             console.error(data.error.message);
         } else if(data.yells) {
             showYells(targetId, data);
         } else {
+            window.alert("MULTI FAIL!");
             console.error("What went wrong?");
         }
     })

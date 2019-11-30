@@ -117,7 +117,8 @@ function processGroupYear(user, res, group, year) {
 
     db.findScores(2019, group._id, (scores) => {
         db.findTargetsForGroup(group._id, year, (targets) => {
-            calendar.loadCalendar(year, group._id, (calendar) => {
+            const userId = user ? user.id : undefined;
+            calendar.loadCalendar(year, group._id, userId, (calendar) => {
                 loadRules((rules) => {
                     let renderDataObj = getRenderObject(user);
                     renderDataObj.year = year;
@@ -243,6 +244,7 @@ app.get('/yells/:group/:year/:date?', [ check("year").isLength({min: 4, max: 4})
     const year = req.params["year"];
     const date = req.params["date"];
     //TODO: make sure date is in the past
+    const todayString = db.formatDate(getNow());
 
     db.findGroupWithName(groupName, (group) => {
         if(group) {
@@ -255,7 +257,8 @@ app.get('/yells/:group/:year/:date?', [ check("year").isLength({min: 4, max: 4})
                 }
 
                 db.queryYells(query, (yells) => {
-                    yells.forEach(y => y.target = targetsForYear.findTimeForDate(y.date));
+                    let filteredYells = yells.filter(y => (y.date !== todayString));
+                    filteredYells.forEach(y => y.target = targetsForYear.findTimeForDate(y.date));
 
                     let resObj = {
                         "group": {
@@ -264,7 +267,7 @@ app.get('/yells/:group/:year/:date?', [ check("year").isLength({min: 4, max: 4})
                         },
                         "year": year,
                         "date": date,
-                        "yells": yells
+                        "yells": filteredYells
                     }
 
                     if(date) {
@@ -365,7 +368,15 @@ app.post("/addGroup", [ check("name").isLength({min: 5}) ], (req, res) => {
 });
 
 app.post("/yell", [ check("group").isLength({min: 5}) ], (req, res) => {
-    console.log("Somebody yelled!");
+    const today = getNow();
+    if(today.month() != 12) {
+        res.status(400).json(errorObject("Ei ole vielä joulukuu!"));
+        return;
+    } else if(today().date() > 24) {
+        res.status(400).json(errorObject("Joulu meni jo!"));
+        return;
+    }
+
     const user = parseUserForTemplates(req);
     if(user == undefined) {
         console.error("Yell not allowed");

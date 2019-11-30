@@ -65,7 +65,7 @@ export class Calendar {
         return moment.tz(this.timezone);
     }
 
-    _generateDays(year : number, groupId : string, winningYells : Yell[]) : CalendarDay[] {
+    _generateDays(year : number, groupId : string, winningYells : Yell[], todaysYell : Yell | undefined) : CalendarDay[] {
         let days = [];
         const now = this._getNow();
         let calendarActive = (now.year() == year);
@@ -80,6 +80,9 @@ export class Calendar {
             day.today = calendarActive == true && (calendarDay == i);
             if(day.today) {
                 day.hatchClassname += " closed today";
+                if(todaysYell) {
+                    day.hatchClassname += " yelled";
+                }
             } else if(calendarActive == true && (i < calendarDay)) {
 
                 let winningYell = winningYells.find(yell => yell.date);
@@ -112,10 +115,13 @@ export class Calendar {
         return shuffle(days);
     }
 
-    loadCalendar(year : number, groupId : string, callback: (days : CalendarDay[]) => void ) {
-        this.db.findWinningYells(year, groupId, (yells) => {
-            const days = this._generateDays(year, groupId, yells);
-            callback(days);
+    loadCalendar(year : number, groupId : string, userId : string, callback: (days : CalendarDay[]) => void ) {
+        const todayDate = this.db.formatDate(this._getNow());
+        this.db.findYellForDate(year, userId, groupId, todayDate, (todaysYell) => {
+            this.db.findWinningYells(year, groupId, (yells) => {
+                const days = this._generateDays(year, groupId, yells, todaysYell);
+                callback(days);
+            });
         });
     }
 

@@ -185,14 +185,11 @@ export class Scheduler {
         console.log("Before midnight check at " + this._getNow().format);
 
         const today = moment.tz(this.targetTimezone);
-        const yesterday = today.add(-1, "days");
-
-        console.log("Yesterday: " + yesterday.format());
-        console.log("Today: " + today.format());
+        const tomorrow = today.add(1, "days");
 
         this.db.findAllGroups((groups) => {
             groups.forEach(group => {
-                let randomTime = this._randomTime(today);
+                let randomTime = this._randomTime(tomorrow);
 
                 if(group._id) {
                     this.db.addTarget(group._id, randomTime, (target) => {
