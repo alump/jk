@@ -93,10 +93,6 @@ export class Target extends Document {
         this.date = date;
         this.time = time;
     }
-
-    hasDate(date : string) {
-        return this.date === date;
-    }
 }
 
 export class TargetsForYear {
@@ -111,7 +107,7 @@ export class TargetsForYear {
     }
 
     findTimeForDate(date : string) : any {
-        let target = this.targets.find(t => (t && t.hasDate(date)))
+        let target = this.targets.find(t => (t && t.date == date))
         return target ? target.time : undefined;
     }
 }
@@ -642,10 +638,9 @@ export class Databases {
         return this.sessions;
     }
 
-    findTargetsForYear(groupId : string, year : number, callback: (res : TargetsForYear) => void) {
+    findTargetsForYear(year : number, groupId : string, callback: (res : TargetsForYear) => void) {
         const query = { "$and": [ { "groupId": groupId }, { "year": year }]};
         this.queryTargets(query, (targets) => {
-            //console.log("Found " + targets.length + " targets");
             const results = new TargetsForYear(year, groupId, targets);
             callback(results);
         });

@@ -248,7 +248,7 @@ app.get('/yells/:group/:year/:date?', [ check("year").isLength({min: 4, max: 4})
 
     db.findGroupWithName(groupName, (group) => {
         if(group) {
-            db.findTargetsForYear(year, group._id, (targetsForYear) => {
+            db.findTargetsForYear(Number(year), group._id, (targetsForYear) => {
                 let query;
                 if(date) {
                     query = { $and: [ { "groupId": group._id }, { "year": Number(year) }, { "date": date }] };
@@ -258,7 +258,7 @@ app.get('/yells/:group/:year/:date?', [ check("year").isLength({min: 4, max: 4})
 
                 db.queryYells(query, (yells) => {
                     let filteredYells = yells.filter(y => (y.date !== todayString));
-                    filteredYells.forEach(y => y.target = targetsForYear.findTimeForDate(y.date));
+                    filteredYells.forEach(y => { y.target = targetsForYear.findTimeForDate(y.date); });
 
                     let resObj = {
                         "group": {
@@ -319,7 +319,7 @@ app.get('/login', passport.authenticate('auth0', { scope: 'openid email profile'
 });
 
 app.get('/login_callback', function (req, res, next) {
-    console.log("login_callback calles");
+    console.log("login_callback called");
 
     passport.authenticate('auth0', function (err, user, info) {
       if (err) { return next(err); }

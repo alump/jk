@@ -171,7 +171,7 @@ export class Scheduler {
             groups.forEach(group => {
                 if(group._id) {
                     const groupId : string = group._id;
-                    this.db.findTargetsForYear(groupId, year, (yearTargets) => {
+                    this.db.findTargetsForYear(year, groupId, (yearTargets) => {
                         this.db.findYellsForGroup(year, groupId, (yells) => {
                             this._convertToScores(year, group, yearTargets, yells);
                         });

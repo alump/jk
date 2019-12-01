@@ -75,7 +75,7 @@ function showYells(targetId, data) {
         }
         let mtime = moment(yell.time);
         let ttime = yell.target ? moment(yell.target) : undefined;
-        let diff = ttime ? ("" + ttime.diff(mtime, "seconds") + " s") : "n/a";
+        let diff = ttime ? ("" + Math.abs(Math.floor(ttime.diff(mtime, "seconds"))) + " s") : "n/a";
         let ttimepres = ttime ? ttime.format("LTS") : "n/a";
 
         createCell(row, "td", mtime.format("L"));
