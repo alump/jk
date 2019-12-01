@@ -74,7 +74,7 @@ export class Scheduler {
         const randomMinutes = randomTimeProcessed % 60;
         randomTimeProcessed = Math.floor(randomTimeProcessed / 60);
         const randomHours = randomTimeProcessed;
-        return random.hour(randomHours).min(randomMinutes).second(randomSeconds);
+        return random.hour(randomHours).minutes(randomMinutes).second(randomSeconds);
     }
 
     _yellArrayToDates(yells : Yell[]) : string[] {

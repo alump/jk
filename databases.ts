@@ -111,7 +111,7 @@ export class TargetsForYear {
     }
 
     findTimeForDate(date : string) : any {
-        let target = this.targets.find(t => t.hasDate(date))
+        let target = this.targets.find(t => (t && t.hasDate(date)))
         return target ? target.time : undefined;
     }
 }
