@@ -55,6 +55,9 @@ export class Scheduler {
         
         console.log("Scheduling past midnight checks to: " + pastMidnightScheduling);
         this._pastMidnightJob = nodeSchedule.scheduleJob(pastMidnightScheduling, (fireDate) => that.afterMidnightCheck());
+
+        // Just recalculate points now
+        this.afterMidnightCheck();
     }
 
     _getNow() : moment.Moment {
@@ -103,7 +106,8 @@ export class Scheduler {
     }
 
     _secondDiffToPoints(seconds : number) {
-        return Math.floor(seconds / 60 / 60) + 1;
+        let points = Math.abs(Math.floor(seconds / 60 / 60)) + 1;
+        return points;
     }
 
     _findWinnerForDay(yells : Yell[], target : string, callback: (userId : string, points : number) => void) {
@@ -111,16 +115,25 @@ export class Scheduler {
         let points = 0;
         let leader : string | undefined;
         let winningYellId : string | undefined;
-        const targetMoment = moment.tz(target);
+        const targetMoment = moment.tz(target, this.targetTimezone);
+        let leadingYell : Yell | undefined = undefined;
 
         yells.forEach(yell => {
-            let yellMoment = moment().tz(yell.time);
+            let yellMoment = moment.tz(yell.time, this.targetTimezone);
             let yellDiff = Math.abs(yellMoment.diff(targetMoment, "seconds"));
             if(yellDiff < bestDiff) {
+                if(leadingYell && leadingYell._id && leadingYell.winning) {
+                    console.warn("Wrong marked winner in database, reverting it");
+                    this.db.updateYell(leadingYell._id, false, 0);
+                }
+                leadingYell = yell;
                 bestDiff = yellDiff;
                 points = this._secondDiffToPoints(yellDiff);
                 leader = yell.user.id;
                 winningYellId = yell._id;
+            } else if(yell.winning && yell._id) {
+                console.warn("Wrong marked winner in database, reverting it");
+                this.db.updateYell(yell._id, false, 0);
             }
         });
 
@@ -129,6 +142,8 @@ export class Scheduler {
                 this.db.updateYell(winningYellId, true, points);
             }
             callback(leader, points);
+        } else {
+            console.warn("No winner for " + this.db.formatDate(targetMoment));
         }
     }
 
@@ -145,7 +160,7 @@ export class Scheduler {
             dates.filter(d => d < todayString).forEach(date => {
                 const targetOfTheDay = targetsForYear.findTimeForDate(date);
                 if(targetOfTheDay) {
-                    let yellsOfTheDay = yells.filter(y => y.date == targetOfTheDay);
+                    let yellsOfTheDay = yells.filter(y => y.date == date);
 
                     this._findWinnerForDay(yellsOfTheDay, targetOfTheDay, (winnerUserId, winnerPoints) => {
                         userIdToPoints[winnerUserId] += winnerPoints;

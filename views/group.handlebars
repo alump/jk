@@ -63,11 +63,10 @@
     <summary>Pistetaulukko</summary>
 
     <table class="standings">
-        <tr><th></th><th>Huutaja</th><th>Pisteet</th></tr>
+        <tr><th>Huutaja</th><th>Pisteet</th></tr>
         {{#each scores}}
         <tr>
-            <td>{{#if image}}<img src="{{image}}" class="profile-image">{{/if}}</td>
-            <td>{{name}}</td>
+            <td>{{#if user.picture}}<img src="{{user.picture}}" class="profile-image">{{/if}} {{user.name}}</td>
             <td>{{points}}</td>
         </tr>
         {{/each}}

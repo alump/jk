@@ -86,6 +86,11 @@ table.standings {
   border-spacing: 0px;
 }
 
+table.standings img {
+    width: 20px;
+    height: 20px;
+}
+
 table.standings th {
   width: 80px;
   background-color: #800;

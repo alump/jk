@@ -65,14 +65,14 @@ export class Group extends Document {
 }
 
 export class Score extends Document {
-    userId: string;
+    user : YellUser
     groupId : string;
     year : number;
     points : number;
 
-    constructor(userId : string, groupId : string, year : number, points : number) {
+    constructor(user : YellUser, groupId : string, year : number, points : number) {
         super();
-        this.userId = userId;
+        this.user = user;
         this.groupId = groupId;
         this.year = year;
         this.points = points;
@@ -255,9 +255,9 @@ export class Databases {
                 console.error("Failed to index year on scores: " + err.message);
             }
         });
-        this.scores.ensureIndex({"fieldName": "user"}, (err : Error) => {
+        this.scores.ensureIndex({"fieldName": "user.id"}, (err : Error) => {
             if(err) {
-                console.error("Failed to index username on scores: " + err.message);
+                console.error("Failed to index user.id on scores: " + err.message);
             }
         });
         this.scores.ensureIndex({"fieldName": "group"}, (err : Error) => {
@@ -471,7 +471,7 @@ export class Databases {
     }
 
     updateScore(userId : string, groupId : string, year : number, points : number, callback: (score : Score | undefined) => void) {
-        const scoreQuery = { $and: [ { "groupId": groupId }, { "userId": userId }, { "year": year } ] };
+        const scoreQuery = { $and: [ { "groupId": groupId }, { "user.id": userId }, { "year": year } ] };
         this.queryScore(scoreQuery, (score) => {
             if(score) {
                 score.points = points;
@@ -483,12 +483,20 @@ export class Databases {
                     }
                 });
             } else {
-                let newScore = new Score(userId, groupId, year, points);
-                this.scores.insert(newScore, (err, newDoc) => {
-                    if(err) {
-                        this._handleSingleError(newScore, err, "Failed to insert a score", callback);
+                this.findUserWithId(userId, (user) => {
+                    if(user) {
+                        const yellUser = new YellUser(userId, user.name, user.email, user.picture);
+                        let newScore = new Score(yellUser, groupId, year, points);
+                        this.scores.insert(newScore, (err, newDoc) => {
+                            if(err) {
+                                this._handleSingleError(newScore, err, "Failed to insert a score", callback);
+                            } else {
+                                callback(newDoc);
+                            }
+                        });
                     } else {
-                        callback(newScore);
+                        console.error("Failed to find user to add score");
+                        callback(undefined);
                     }
                 });
             }
@@ -578,7 +586,13 @@ export class Databases {
 
     findScores(year : number, groupId : string, callback: ( scores : Score[]) => void) {
         const query = { $and: [{ "year" : year}, { "groupId" : groupId}]};
-        this.queryScores(query, callback);
+        this.queryScores(query, (scores) => {
+            if(scores) {
+                callback(scores.sort((a,b) => b.points - a.points));
+            } else {
+                callback([]);
+            }
+        });
     }
 
     addTarget(groupId : string, moment : moment.Moment, callback: (target : Target | undefined) => void) {
@@ -623,7 +637,7 @@ export class Databases {
                     callback(groups);
                 });
             } else {
-                console.error("Failed to find user");
+                console.error("Failed to find user for user groups: " + userId);
                 callback([]);
             }
         });
@@ -647,7 +661,7 @@ export class Databases {
     }
 
     updateYell(yellId : string, winner: boolean, points: number) {
-        this.yells.update({ "_id": yellId }, { "$set": { "winner": winner, "points": points }}, {}, (err, numberOfUpdated, upsert) => {
+        this.yells.update({ "_id": yellId }, { "$set": { "winning": winner, "points": points }}, {}, (err, numberOfUpdated, upsert) => {
             if(err) {
                 console.error("Failed to update yell");
                 console.error(err.message);
