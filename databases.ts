@@ -669,8 +669,8 @@ export class Databases {
         });
     }
 
-    findYellForDate(year : number, userId : string, groupId : string, date : string, callback: (yell : Yell | undefined) => void) {
-        if(userId) {
+    findYellForDate(year : number, userId : string | undefined, groupId : string, date : string, callback: (yell : Yell | undefined) => void) {
+        if(!userId) {
             callback(undefined);
         } else {
             const query = { $and: [ { "year": year }, { "user.id": userId }, { "groupId": groupId }, { "date": date } ] };
