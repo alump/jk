@@ -43,7 +43,7 @@ function showYells(targetId, data) {
     if(data.date) {
         infoText += " " + data.date;
         if(data.target) {
-            infoText += " " + moment(data.time).format("LTS");
+            infoText += " " + moment(data.target).tz(window.timezone).format("LTS");
         }
     }
     infoText += ":";
@@ -73,8 +73,8 @@ function showYells(targetId, data) {
         if(yell.winning) {
             row.className = "winner";
         }
-        let mtime = moment(yell.time);
-        let ttime = yell.target ? moment(yell.target) : undefined;
+        let mtime = moment(yell.time).tz(window.timezone);
+        let ttime = yell.target ? moment(yell.target).tz(window.timezone) : undefined;
         let diff = ttime ? ("" + Math.abs(Math.floor(ttime.diff(mtime, "seconds"))) + " s") : "n/a";
         let ttimepres = ttime ? ttime.format("LTS") : "n/a";
 
@@ -93,7 +93,7 @@ function showYells(targetId, data) {
 }
 
 function loadYesterdaysYells(targetId, url) {
-    const date = moment().subtract(1, 'days').format("YYYY-MM-DD");
+    const date = moment.tz(window.timezone).subtract(1, 'days').format("YYYY-MM-DD");
     loadYells(targetId, url + "/" + date);
 }
 

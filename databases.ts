@@ -351,7 +351,13 @@ export class Databases {
     }
 
     queryYells(query : any, callback: (docs: Yell[]) => void) {
-        this._queryDocs<Yell>(this.yells, "yells", query, callback);
+        this.yells.find(query).sort({ "time": -1 }).exec((err : Error, docs : Yell[]) => {
+            if(err) {
+                this._handleArrayError(query, err, "Failed to load yells", callback);
+            } else {
+                callback(docs);
+            }
+        });
     }
 
     queryGroup(query: any, callback: (doc: Group | undefined) => void) {

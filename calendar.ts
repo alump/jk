@@ -65,6 +65,20 @@ export class Calendar {
         return moment.tz(this.timezone);
     }
 
+    _twoDigitPresentation(value : number) : string {
+        if(value <= 0) {
+            return "00";
+        } else if(value < 10) {
+            return "0" + value;
+        } else {
+            return "" + value;
+        }
+    }
+
+    _createDayString(year : number, month : number, day : number) : string {
+        return "" + year + "-" + this._twoDigitPresentation(month) + "-" + this._twoDigitPresentation(day);
+    }
+
     _generateDays(year : number, groupId : string, winningYells : Yell[], todaysYell : Yell | undefined) : CalendarDay[] {
         let days = [];
         const now = this._getNow();
@@ -76,6 +90,7 @@ export class Calendar {
     
         for(let i = 1; i <= daysInCalendar; ++i) {
             let day = new CalendarDay(year, month, i);
+            const dayString = this._createDayString(year, month, i);
     
             day.today = calendarActive == true && (calendarDay == i);
             if(day.today) {
@@ -85,7 +100,7 @@ export class Calendar {
                 }
             } else if(calendarActive == true && (i < calendarDay)) {
 
-                let winningYell = winningYells.find(yell => yell.date);
+                let winningYell = winningYells.find(yell => yell.date == dayString);
                 if(winningYell) {
                     day.points = winningYell.points;
                     day.winner = winningYell.user.id;
